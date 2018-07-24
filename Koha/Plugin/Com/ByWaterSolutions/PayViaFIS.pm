@@ -10,7 +10,6 @@ use C4::Context;
 use C4::Auth;
 use Koha::Account;
 use Koha::Account::Lines;
-use Cwd qw(abs_path);
 use URI::Escape qw(uri_unescape);
 use LWP::UserAgent;
 
@@ -55,7 +54,7 @@ sub opac_online_payment_begin {
     my $cgi = $self->{'cgi'};
 
     my ( $template, $borrowernumber ) = get_template_and_user(
-        {   template_name   => abs_path( $self->mbf_path( 'opac_online_payment_begin.tt' ) ),
+        {   template_name   => $self->mbf_path('opac_online_payment_begin.tt'),
             query           => $cgi,
             type            => 'opac',
             authnotrequired => 0,
@@ -91,7 +90,7 @@ sub opac_online_payment_end {
 
     my ( $template, $borrowernumber ) = get_template_and_user(
         {
-            template_name => abs_path( $self->mbf_path('opac_online_payment_end.tt') ),
+            template_name => $self->mbf_path('opac_online_payment_end.tt'),
             query           => $cgi,
             type            => 'opac',
             authnotrequired => 0,
