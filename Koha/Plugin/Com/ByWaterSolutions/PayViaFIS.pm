@@ -28,6 +28,8 @@ our $metadata = {
     version         => $VERSION,
 };
 
+our $ENABLE_DEBUGGING = 1;
+
 sub new {
     my ( $class, $args ) = @_;
 
@@ -97,6 +99,7 @@ sub opac_online_payment_end {
             is_plugin       => 1,
         }
     );
+    warn "FIS: BORROWERNUMBER - $borrowernumber" if $ENABLE_DEBUGGING;
 
     my $transaction_id = $cgi->param('TransactionId');
 
@@ -122,12 +125,14 @@ sub opac_online_payment_end {
     my ( $m, $v );
 
     if ( $response->is_success ) {
+        warn "FIS: RESPONSE CONTENT - ***$response->decoded_content***" if $ENABLE_DEBUGGING;
         my @params = split( '&', uri_unescape( $response->decoded_content ) );
         my $params;
         foreach my $p (@params) {
             my ( $key, $value ) = split( '=', $p );
             $params->{$key} = $value // q{};
         }
+        warn "FIS: INCOMING PARAMS - " . Data::Dumper::Dumper( $params ) if $ENABLE_DEBUGGING;
 
         if ( $params->{TransactionID} eq $transaction_id ) {
 
@@ -136,13 +141,20 @@ sub opac_online_payment_end {
             unless ( Koha::Account::Lines->search( { note => $note } )->count() ) {
 
                 my @line_items = split( /,/, $cgi->param('LineItems') );
+                warn "FIS: LINE ITEMS - " . Data::Dumper::Dumper( \@line_items ) if $ENABLE_DEBUGGING;
 
                 my @paid;
                 my $account = Koha::Account->new( { patron_id => $borrowernumber } );
                 foreach my $l (@line_items) {
+                    warn "FIS: LINE ITEM - ***$l***" if $ENABLE_DEBUGGING;
                     $l = substr( $l, 1, length($l) - 2 );
                     my ( undef, $id, $description, $amount ) =
                       split( /[\*,\~]/, $l );
+
+                    warn "FIS: ACCOUNTLINE TO PAY ID - $id" if $ENABLE_DEBUGGING;
+                    warn "FIS: DESC - $description" if $ENABLE_DEBUGGING;
+                    warn "FIST: AMOUNT - $amount" if $ENABLE_DEBUGGING;
+
                     push(
                         @paid,
                         {
