@@ -92,7 +92,7 @@
 
                         [% SET i = 0 %]
                         [% UNLESS a.description %][% SET a.description = 'No description' %][% END %]
-                        <input type="hidden" name="LineItems" value="[% FOREACH a IN accountlines %][% i = i + 1 %][[% i %]*[% a.accountlines_id %]*[% a.description | html %]*[% a.amountoutstanding %]][% IF !loop.last %],[% END %][% END %]" />
+                        <input type="hidden" name="LineItems" value="[% FOREACH a IN accountlines %][% i = i + 1 %][[% i %]*[% a.accountlines_id %]*[% a.description | replace(",", "" ) | html %]*[% a.amountoutstanding %]][% IF !loop.last %],[% END %][% END %]" />
 
                         <input type="submit" class="btn" value="Yes, proceed with payment" />
                     </form>
