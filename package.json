@@ -1,7 +1,7 @@
 {
   "name": "koha-plugin-pay-via-fis",
-  "version": "1.0.4",
-  "previous_version": "1.0.3",
+  "version": "1.0.5",
+  "previous_version": "1.0.4",
   "description": "Koha FIS OPAC Online Payment Plugin",
   "devDependencies": {
     "gulp": "^3.9.1",
