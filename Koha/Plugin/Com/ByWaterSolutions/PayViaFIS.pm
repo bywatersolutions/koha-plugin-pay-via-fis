@@ -102,6 +102,7 @@ sub opac_online_payment_end {
     warn "FIS: BORROWERNUMBER - $borrowernumber" if $ENABLE_DEBUGGING;
 
     my $transaction_id = $cgi->param('TransactionId');
+    warn "FIS: TRANSACTION ID: $transaction_id";
 
     my $merchant_code =
       C4::Context->preference('FisMerchantCode');    #33WSH-LIBRA-PDWEB-W
@@ -125,7 +126,7 @@ sub opac_online_payment_end {
     my ( $m, $v );
 
     if ( $response->is_success ) {
-        warn "FIS: RESPONSE CONTENT - ***$response->decoded_content***" if $ENABLE_DEBUGGING;
+        warn "FIS: RESPONSE CONTENT - ***" . $response->decoded_content . "***" if $ENABLE_DEBUGGING;
         my @params = split( '&', uri_unescape( $response->decoded_content ) );
         my $params;
         foreach my $p (@params) {
