@@ -139,7 +139,7 @@ sub opac_online_payment_end {
 
             my $note = "FIS: $transaction_id";
 
-            unless ( Koha::Account::Lines->search( { note => $note } )->count() ) {
+            unless ( Koha::Account::Lines->search( { borrowernumber => $borrowernumber, note => $note } )->count() ) {
 
                 my @line_items = split( /,/, $cgi->param('LineItems') );
                 warn "FIS: LINE ITEMS - " . Data::Dumper::Dumper( \@line_items ) if $ENABLE_DEBUGGING;
