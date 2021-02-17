@@ -137,7 +137,7 @@ sub opac_online_payment_end {
 
         if ( $params->{TransactionID} eq $transaction_id ) {
 
-            my $note = "FIS";
+            my $note = "FIS: $transaction_id";
 
             unless ( Koha::Account::Lines->search( { note => $note } )->count() ) {
 
