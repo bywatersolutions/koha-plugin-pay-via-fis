@@ -1,0 +1,36 @@
+{
+  "/payment":{
+    "post":{
+      "x-mojo-to":"Com::ByWaterSolutions::PayViaFIS::API#handle_payment",
+      "operationId":"handlePayment",
+      "tags":[
+        "invoice-cloud"
+      ],
+      "parameters": [
+        {
+          "name": "TransactionId",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "responses":{
+        "200":{
+          "description":"Payment accepted"
+        },
+        "500":{
+          "description":"An error occured",
+          "schema":{
+            "type":"object",
+            "properties":{
+              "error":{
+                "description":"An explanation for the error",
+                "type":"string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
