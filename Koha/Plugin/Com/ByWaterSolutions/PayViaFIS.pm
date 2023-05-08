@@ -10,8 +10,10 @@ use C4::Context;
 use C4::Auth qw(get_template_and_user);
 use Koha::Account;
 use Koha::Account::Lines;
-use URI::Escape qw(uri_unescape);
+
+use JSON qw(decode_json);
 use LWP::UserAgent;
+use URI::Escape qw(uri_unescape);
 
 ## Here we set our plugin version
 our $VERSION = "{VERSION}";
@@ -234,6 +236,21 @@ sub configure {
         );
         $self->go_home();
     }
+}
+
+sub api_routes {
+    my ( $self, $args ) = @_;
+
+    my $spec_str = $self->mbf_read('openapi.json');
+    my $spec     = decode_json($spec_str);
+
+    return $spec;
+}
+
+sub api_namespace {
+    my ($self) = @_;
+
+    return 'fis';
 }
 
 sub install() {
