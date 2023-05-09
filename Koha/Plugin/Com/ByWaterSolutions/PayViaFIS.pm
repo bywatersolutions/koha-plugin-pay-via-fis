@@ -50,7 +50,7 @@ sub new {
 sub opac_online_payment {
     my ( $self, $args ) = @_;
 
-    return $self->retrieve_data('enable_opac_payments') eq 'Yes';
+    return 1;
 }
 
 sub opac_online_payment_begin {
@@ -74,7 +74,6 @@ sub opac_online_payment_begin {
     $template->param(
         borrower             => scalar Koha::Patrons->find($borrowernumber),
         payment_method       => scalar $cgi->param('payment_method'),
-        enable_opac_payments => $self->retrieve_data('enable_opac_payments'),
         FisPostUrl           => $self->retrieve_data('FisPostUrl'),
         FisMerchantCode      => $self->retrieve_data('FisMerchantCode'),
         FisSettleCode        => $self->retrieve_data('FisSettleCode'),
@@ -212,7 +211,6 @@ sub configure {
 
         ## Grab the values we already have for our settings, if any exist
         $template->param(
-            enable_opac_payments => $self->retrieve_data('enable_opac_payments'),
             FisPostUrl      => $self->retrieve_data('FisPostUrl'),
             FisMerchantCode => $self->retrieve_data('FisMerchantCode'),
             FisSettleCode   => $self->retrieve_data('FisSettleCode'),
@@ -226,7 +224,6 @@ sub configure {
     else {
         $self->store_data(
             {
-                enable_opac_payments => $cgi->param('enable_opac_payments'),
                 FisPostUrl         => $cgi->param('FisPostUrl'),
                 FisMerchantCode    => $cgi->param('FisMerchantCode'),
                 FisSettleCode      => $cgi->param('FisSettleCode'),
