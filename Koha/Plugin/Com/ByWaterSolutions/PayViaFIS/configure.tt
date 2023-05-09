@@ -9,44 +9,41 @@
 <div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Pay Via FIS &rsaquo; Configuration</div>
 
 <div id="doc3">
-    <!-- We can access our own plugins resource files using the PLUGIN_PATH variable. -->
-    <img src="[% PLUGIN_PATH %]/logo.png" />
-    <h3>Koha: Plugin: Pay Via FIS: Configuration</h3>
-
-    <!-- Notice our form here has no 'action', this is good, it means that our forms will always get passed back to 'plugins/run.pl'. You could hard code it instead if you prefer -->
+  <div class="container">
     <form method="get">
         <!-- Always pass these two parameters so the plugin system knows what to execute! -->
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
 
-        <label for="FisPostUrl">FIS Post URL: </label>
-        <input type="text" name="FisPostUrl" value="[% FisPostUrl %]" />
+        <div class="form-group">
+            <label for="FisPostUrl">FIS Post URL: </label>
+            <input class="form-control" type="text" name="FisPostUrl" value="[% FisPostUrl %]" />
+        </div>
 
-        <p>
+        <div class="form-group">
+            <label for="FisMerchantCode">FIS Merchant Code: </label>
+            <input class="form-control" type="text" name="FisMerchantCode" value="[% FisMerchantCode %]" />
+        </div>
 
-        <label for="FisMerchantCode">FIS Merchant Code: </label>
-        <input type="text" name="FisMerchantCode" value="[% FisMerchantCode %]" />
+        <div class="form-group">
+            <label for="FisSettleCode">FIS Settle Code: </label>
+            <input class="form-control" type="text" name="FisSettleCode" value="[% FisSettleCode %]" />
+        </div>
 
-        <p>
+        <div class="form-group">
+            <label for="FisApiUrl">FIS API URL: </label>
+            <input class="form-control" type="text" name="FisApiUrl" value="[% FisApiUrl %]" />
+        </div>
 
-        <label for="FisSettleCode">FIS Settle Code: </label>
-        <input type="text" name="FisSettleCode" value="[% FisSettleCode %]" />
-
-        <p>
-
-        <label for="FisApiUrl">FIS API URL: </label>
-        <input type="text" name="FisApiUrl" value="[% FisApiUrl %]" />
-
-        <p>
-
-        <label for="FisApiPassword">FIS API Password: </label>
-        <input type="text" name="FisApiPassword" value="[% FisApiPassword %]" />
-
-        <p>
+        <div class="form-group">
+            <label for="FisApiPassword">FIS API Password: </label>
+            <input class="form-control" type="text" name="FisApiPassword" value="[% FisApiPassword %]" />
+        </div>
 
         <input type="hidden" name="save" value="1" />
 
-        <input type="submit" value="Save configuration" />
+        <input class="btn btn-primary" type="submit" value="Save configuration" />
     </form>
+  </div>
 
 [% INCLUDE 'intranet-bottom.inc' %]
