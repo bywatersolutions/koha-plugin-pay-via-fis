@@ -8,7 +8,31 @@
       ],
       "parameters": [
         {
-          "name": "TransactionId",
+          "name": "FISTransactionNumber",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "LineItems",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "BorrowerNumber",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "MerchantCode",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "SettleCode",
           "in": "query",
           "required": false,
           "type": "string"
