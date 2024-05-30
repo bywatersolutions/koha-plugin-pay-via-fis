@@ -14,6 +14,7 @@ use Koha::Account::Lines;
 use JSON qw(decode_json);
 use LWP::UserAgent;
 use URI::Escape qw(uri_unescape);
+use Digest::SHA qw(sha256_hex);
 
 ## Here we set our plugin version
 our $VERSION = "{VERSION}";
@@ -138,7 +139,7 @@ sub opac_online_payment_end {
 
         if ( $params->{TransactionID} eq $transaction_id ) {
 
-            my $note = "FIS: $transaction_id";
+            my $note = "FIS: " . sha256_hex($transaction_id);
 
             unless ( Koha::Account::Lines->search( { borrowernumber => $borrowernumber, note => $note } )->count() ) {
 
