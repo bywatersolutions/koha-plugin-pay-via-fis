@@ -10,34 +10,70 @@
 
 <div id="doc3">
   <div class="container">
-    <form method="get">
+    [% UNLESS encryption_available %]
+      <div class="dialog alert">
+        <strong>Koha's encryption is not available.</strong>
+        The FIS API password can only be stored in cleartext until an <code>encryption_key</code> is
+        set in <code>koha-conf.xml</code>. Add one (we recommend at least 32 bytes, for example
+        <code>pwgen 32 1</code>), restart Koha, then reopen this page and the stored password will be
+        encrypted automatically.
+      </div>
+    [% ELSIF FisApiPassword_is_set AND NOT FisApiPassword_is_encrypted %]
+      <div class="dialog alert">
+        <strong>The stored FIS API password is not encrypted.</strong>
+        Re-enter it below and save to store it encrypted.
+      </div>
+    [% END %]
+
+    <form method="post">
         <!-- Always pass these two parameters so the plugin system knows what to execute! -->
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
+        [% IF csrf_token %]<input type="hidden" name="csrf_token" value="[% csrf_token | html %]" />[% END %]
 
         <div class="form-group">
             <label for="FisPostUrl">FIS Post URL: </label>
-            <input class="form-control" type="text" name="FisPostUrl" value="[% FisPostUrl %]" />
+            <input class="form-control" type="text" id="FisPostUrl" name="FisPostUrl" value="[% FisPostUrl | html %]" />
         </div>
 
         <div class="form-group">
             <label for="FisMerchantCode">FIS Merchant Code: </label>
-            <input class="form-control" type="text" name="FisMerchantCode" value="[% FisMerchantCode %]" />
+            <input class="form-control" type="text" id="FisMerchantCode" name="FisMerchantCode" value="[% FisMerchantCode | html %]" />
         </div>
 
         <div class="form-group">
             <label for="FisSettleCode">FIS Settle Code: </label>
-            <input class="form-control" type="text" name="FisSettleCode" value="[% FisSettleCode %]" />
+            <input class="form-control" type="text" id="FisSettleCode" name="FisSettleCode" value="[% FisSettleCode | html %]" />
         </div>
 
         <div class="form-group">
             <label for="FisApiUrl">FIS API URL: </label>
-            <input class="form-control" type="text" name="FisApiUrl" value="[% FisApiUrl %]" />
+            <input class="form-control" type="text" id="FisApiUrl" name="FisApiUrl" value="[% FisApiUrl | html %]" />
         </div>
 
         <div class="form-group">
             <label for="FisApiPassword">FIS API Password: </label>
-            <input class="form-control" type="text" name="FisApiPassword" value="[% FisApiPassword %]" />
+            <input class="form-control" type="password" id="FisApiPassword" name="FisApiPassword" value="" autocomplete="new-password" />
+            <p class="help-block">
+              [% IF FisApiPassword_is_set %]
+                A password is already stored. Leave this blank to keep it, or enter a new one to replace it.
+              [% ELSE %]
+                No password is stored yet.
+              [% END %]
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-inline" for="EnableDebugging">
+                <input type="checkbox" id="EnableDebugging" name="EnableDebugging" value="1" [% IF EnableDebugging %]checked="checked"[% END %] />
+                Enable debug logging
+            </label>
+            <p class="help-block">
+                Writes the full FIS API request and response, patron numbers, and fee details to the
+                web server log on every payment. Useful when diagnosing a problem with FIS, but it is
+                verbose and the log is kept for as long as your server's log rotation policy says.
+                Leave this off unless you are actively troubleshooting.
+            </p>
         </div>
 
         <input type="hidden" name="save" value="1" />

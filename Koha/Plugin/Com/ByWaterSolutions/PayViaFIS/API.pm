@@ -4,16 +4,19 @@ use Modern::Perl;
 
 use Mojo::Base 'Mojolicious::Controller';
 
+use Koha::Plugin::Com::ByWaterSolutions::PayViaFIS;
+
 use WWW::Form::UrlEncoded qw(parse_urlencoded);
 
-our $ENABLE_DEBUGGING = 1;
-
 sub handle_payment {
-    warn "Koha::Plugin::Com::ByWaterSolutions::PayViaFIS::API::handle_payment" if $ENABLE_DEBUGGING;
+    my $plugin = Koha::Plugin::Com::ByWaterSolutions::PayViaFIS->new();
+    my $debug  = $plugin->_debugging_enabled;
+
+    warn "Koha::Plugin::Com::ByWaterSolutions::PayViaFIS::API::handle_payment" if $debug;
     my $c = shift->openapi->valid_input or return;
 
     my $params = $c->req->params->to_hash;
-    warn "FIS: PARAMS: " . Data::Dumper::Dumper($params) if $ENABLE_DEBUGGING;
+    warn "FIS: PARAMS: " . Data::Dumper::Dumper($params) if $debug;
 
     my $transaction_id = $params->{FISTransactionNumber};
     my $borrowernumber = $params->{UserPart3} || $params->{BorrowerNumber};
@@ -25,13 +28,11 @@ sub handle_payment {
     my @line_items = split( /\,?\[(.*)\]\n?/, $li );
     @line_items = grep { $_ ne q{} } @line_items;
 
-    warn "FIS: TRANSACTION ID: $transaction_id" if $ENABLE_DEBUGGING;
+    warn "FIS: TRANSACTION ID: $transaction_id" if $debug;
 
-    my $merchant_code =
-      C4::Context->preference('FisMerchantCode');    #33WSH-LIBRA-PDWEB-W
-    my $settle_code =
-      C4::Context->preference('FisSettleCode');      #33WSH-LIBRA-PDWEB-00
-    my $password = C4::Context->preference('FisApiPassword');    #testpass;
+    # The API password is not part of this check - FIS does not send it back to us
+    my $merchant_code = $plugin->retrieve_data('FisMerchantCode');    #33WSH-LIBRA-PDWEB-W
+    my $settle_code   = $plugin->retrieve_data('FisSettleCode');      #33WSH-LIBRA-PDWEB-00
 
     return $c->render(
         status  => 500,
@@ -53,19 +54,19 @@ sub handle_payment {
         { borrowernumber => $borrowernumber, note => $note } )->count();
 
     warn "FIS: LINE ITEMS - " . Data::Dumper::Dumper( \@line_items )
-      if $ENABLE_DEBUGGING;
+      if $debug;
 
     my @paid;
-    warn "FIS: BORROWERNUMBER - $borrowernumber" if $ENABLE_DEBUGGING;
+    warn "FIS: BORROWERNUMBER - $borrowernumber" if $debug;
     my $account = Koha::Account->new( { patron_id => $borrowernumber } );
     foreach my $l (@line_items) {
-        warn "FIS: LINE ITEM - ***$l***" if $ENABLE_DEBUGGING;
+        warn "FIS: LINE ITEM - ***$l***" if $debug;
         $l =~ s/^\s+|\s+$//g;
         my ( $i, $id, $description, $amount ) = split( /\*/, $l );
 
-        warn "FIS: ACCOUNTLINE TO PAY ID - $id" if $ENABLE_DEBUGGING;
-        warn "FIS: DESC - $description"         if $ENABLE_DEBUGGING;
-        warn "FIST: AMOUNT - $amount"           if $ENABLE_DEBUGGING;
+        warn "FIS: ACCOUNTLINE TO PAY ID - $id" if $debug;
+        warn "FIS: DESC - $description"         if $debug;
+        warn "FIST: AMOUNT - $amount"           if $debug;
 
         push(
             @paid,
