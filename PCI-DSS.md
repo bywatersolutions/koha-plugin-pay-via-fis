@@ -49,7 +49,11 @@ succeeded, and Koha marks the selected fees as paid.
   because a reader who greps the logs of a site with debugging enabled will find it, and should
   find it documented.
 - Which fields the postback actually carries is **selected per merchant profile** by the client, so
-  what any given library receives depends on their FIS configuration. See §7.
+  what any given library receives depends on their FIS configuration. See §7. At the one production
+  site reviewed, the postback carried no card-derived data at all, and none appeared anywhere in
+  that site's FIS log output — so row 4 above reads "No" in practice there. It is left as "Yes"
+  because another profile could be configured to send the authorisation code and payment method
+  code.
 
 ### Two terms that look like card data and are not
 
@@ -193,9 +197,18 @@ so the card-derived fields arrive in the POST body and are discarded.
 request.
 
 The response is parsed into an arbitrary key/value hash ([`:145-153`][pm145-153]) and only
-`TransactionID` and `TransactionAmount` are read. **The full field list of this response is not
-covered by the vendor specification supplied**, which documents the form post, XML post and
-postback but not this endpoint. See §7.
+`TransactionID` and `TransactionAmount` are read. The vendor specification supplied does not cover
+this endpoint, so the field list below comes from **observed production responses** at a live site
+(Washoe County Library, logs reviewed 2026-08-18):
+
+| Field | Classification | Observed value shape |
+|---|---|---|
+| `IsValid` | Non-personal | `False` |
+| `Message` | Non-personal | A diagnostic string, e.g. `TransactionStatusRequest--OriginalTransactionID is null or empty` |
+
+**No card data appears in any observed response**, and no card-related field name appears anywhere
+in that site's FIS log output. Note the caveat in §7: every observed response was a *failure*, so
+the field list of a successful response remains unconfirmed.
 
 ### 4.3 Payment notification endpoint
 
@@ -211,7 +224,13 @@ Five parameters are declared ([`openapi.json`][oa]): `FISTransactionNumber`, `Li
 Per the specification's postback appendix, the variables FIS sends are **selected by the client per
 merchant profile** and may include Transaction ID, **Authorization Code**, Return Code, Return
 Message, Transaction Date Stamp, **Payment Method Code**, Merchant Amount, Convenience Fee,
-Transaction Amount, the full billing block, User Parts 1–6 and Lineitems.
+Transaction Amount, the full billing block, User Parts 1–6 and Lineitems. That is the maximum the
+specification permits, not what any given site receives.
+
+**Observed in production** at a live site (Washoe County Library, 198 postbacks reviewed
+2026-08-18), the profile sends exactly the five declared parameters and nothing else:
+`FISTransactionNumber`, `BorrowerNumber`, `MerchantCode`, `SettleCode`, `LineItems`. No
+authorisation code, no payment method code, no billing block.
 
 **Cardholder data in this channel: none.** The masked card number is *not* among the postback
 variables — it appears only in the passback of §4.1.
@@ -256,6 +275,13 @@ could not be encrypted ([`:386`][pm386], [`:416`][pm416]). They contain no patro
 
 **This is the only place any card-derived data can come to rest**, and only on a site that has
 switched debug logging on.
+
+**Confirmed in production.** At the site reviewed, running a version that predates the debug setting
+(so logging was unconditional), the log holds one entry per payment containing the patron number and
+the **title and call number of the borrowed item** the fee relates to, retained for as long as the
+host's rotation policy keeps it. No card-derived data was present there — see §4.3 — but the patron
+borrowing detail was. This is a patron-record confidentiality exposure rather than a PCI one; see
+§6.
 
 **Log retention:** log files are rotated and removed by the host operating system's `logrotate`
 configuration, not by this plugin. The plugin has no control over, and makes no guarantee about, how
@@ -340,8 +366,8 @@ agreement with them, not by this plugin.
 
 | Question | Why the code cannot answer it | Evidence needed | Effect on §1 |
 |---|---|---|---|
-| What fields does the `ProcessTransactionStatus` response contain? | The response is decoded into an arbitrary key/value hash ([`:145-153`][pm145-153]) and never enumerated; two keys are read and the whole body is logged when debugging is on. The vendor specification supplied covers the form post, XML post and postback, but not this endpoint. | FIS's `ProcessTransactionStatus` API specification. | None on rows 1–3: the plugin never requests card data. Row 4 already reads "Yes" for the log surface, so a card-derived field here would not change it. A full PAN here would change rows 2–4, which the other documented channels make unlikely but do not exclude. |
-| Which postback variables does each library actually receive? | FIS's postback appendix states the variables are selected by the client per merchant profile, so the set is a site configuration rather than a property of this code. | Each library's FIS merchant profile. | None. The maximum set is documented in §4.3 and contains no cardholder data. |
+| What does a **successful** `ProcessTransactionStatus` response contain? | The vendor specification supplied does not cover this endpoint. Production responses have been observed (§4.2), but every one was a failure — `IsValid=False` — because the verification call is broken at the site reviewed (§8). The success-path field list is therefore still unconfirmed. | FIS's `ProcessTransactionStatus` API specification, or a log from a site where the call succeeds. | None on rows 1–3: the plugin never requests card data, and no card-related field name has been observed in any response. A card-derived field on the success path would not change row 4, which is already "Yes". |
+| Which postback variables does each library actually receive? | FIS's postback appendix states the variables are selected by the client per merchant profile, so the set is a site configuration rather than a property of this code. One site has been checked (§4.3) and sends no card-derived data; others are unverified. | Each library's FIS merchant profile. | None. The maximum set is documented in §4.3 and contains no cardholder data. |
 
 ---
 
@@ -354,6 +380,7 @@ cardholder data.
 |---|---|---|---|
 | The payment notification endpoint declares no `x-koha-authorization` block and verifies no shared secret or signature. It compares the submitted merchant and settle codes against the configured values, but those identify the merchant rather than authenticate the caller, and the credited amount is taken from the caller-supplied line items. | [`openapi.json`][oa], [`API.pm:18`][api18], [`:34-45`][api34-45] | Does not affect the cardholder data determination in §1 — no card data is involved. Affects the integrity of the payment record. | Open |
 | The two crediting paths write different notes for the same kind of event — the return leg hashes the transaction id, the notification endpoint stores it in cleartext. | [`:155`][pm155], [`API.pm:47`][api47] | Affects §5.1. Reconciliation and duplicate detection differ between the two paths. | Open |
+| **The OPAC return leg does not credit payments.** Where FIS's passback does not supply a `TransactionId` form field — for example a profile configured for XML Passback, where the specification states all passback data arrives in a single `Xml` field — the plugin reads an empty transaction id, the verification call is rejected with `OriginalTransactionID is null or empty`, and the patron is shown "The transaction id  for this payment is invalid" even though the payment succeeded. Confirmed in production at the site reviewed: every observed return leg failed this way, while 198 payments were credited normally through the notification endpoint. | [`:122`][pm122], [`:131-139`][pm131-139], [`:196-202`][pm196-202] | Does not affect any determination in §1 — no card data is involved. Affects whether the return leg works at all, and what the patron is told. | Open |
 | Itemised fee descriptions are sent to FIS and appear in the log when debugging is on. | [`begin.tt:113`][begin113] | Outside PCI scope; within scope of patron-record confidentiality. See §6. | Open |
 | The API password was held in cleartext in `plugin_data`, and in a system preference readable with only the `parameters` permission. | [`:45`][pm45] | Credential exposure, not cardholder data. | **Remediated in v2.1.0** — encrypted at rest, migrated off system preferences. See §5.3 |
 | The configuration form submitted by `GET` with the password in a plain text field. | [`configure.tt:28`][conf28], [`:56`][conf56] | Credential exposure, not cardholder data. | **Remediated in v2.1.0** — form moved to `POST` with a CSRF token, and the credential is no longer rendered into the page |
@@ -379,7 +406,13 @@ were read, regardless of later changes.
 
 **Vendor documentation:** FIS *HTTP and XML Post* integration specification (v2007 revision,
 © 2010 Fidelity National Information Services), supplied by the vendor. Used for the passback schema
-in §4.1 and the postback variable list in §4.3.
+in §4.1 and the maximum postback variable list in §4.3.
+
+**Production evidence:** application logs from Washoe County Library, reviewed 2026-08-18 — 198
+payment notifications and the available OPAC return legs, across current and rotated logs. Used for
+the observed `ProcessTransactionStatus` fields in §4.2, the observed postback field set in §4.3, and
+the confirmation in §5.2 that fee descriptions reach the log. Only field names, message shapes and
+counts were extracted; no patron record or credential value was copied out of those logs.
 
 **Not reviewed:** build tooling, dependency trees, and Koha core. Koha core's own handling of
 `accountlines` is outside this document. FIS's own systems and PCI DSS validation status are outside
@@ -395,6 +428,7 @@ call, the API controller, `openapi.json`, or any logging statement in a payment 
 | Date | Version | Commit | Reviewer | Change |
 |---|---|---|---|---|
 | 2026-08-18 | v2.1.0 | [`878c571`][commit] | Kyle M Hall | Initial review, against the v2.1.0 release and the vendor integration specification |
+| 2026-08-18 | v2.1.0 | [`878c571`][commit] | Kyle M Hall | Confirmed §4.2, §4.3 and §5.2 against production logs from a live site, and recorded the non-functional OPAC return leg in §8 |
 
 ---
 
@@ -468,6 +502,7 @@ To re-review at a new commit:
 [pm171]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L171
 [pm172]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L172
 [pm183-189]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L183-L189
+[pm196-202]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L196-L202
 [pm283]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L283
 [pm341]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L341
 [pm379]: https://github.com/bywatersolutions/koha-plugin-pay-via-fis/blob/878c5710ad2fb79552ff67b5723799457cf01050/Koha/Plugin/Com/ByWaterSolutions/PayViaFIS.pm#L379
